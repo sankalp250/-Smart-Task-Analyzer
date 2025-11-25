@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,8 +9,10 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <!-- Hero Section -->
     <header class="hero">
@@ -18,8 +21,11 @@
                 <div class="logo-section">
                     <div class="logo-icon">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path
+                                d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </div>
                     <h1>Smart Task Analyzer</h1>
@@ -87,11 +93,13 @@
                             </div>
                             <div class="form-group">
                                 <label for="task-hours">Estimated Hours *</label>
-                                <input type="number" id="task-hours" min="0.5" step="0.5" placeholder="e.g., 3" required>
+                                <input type="number" id="task-hours" min="0.5" step="0.5" placeholder="e.g., 3"
+                                    required>
                             </div>
                             <div class="form-group">
                                 <label for="task-importance">Importance (1-10) *</label>
-                                <input type="number" id="task-importance" min="1" max="10" placeholder="e.g., 8" required>
+                                <input type="number" id="task-importance" min="1" max="10" placeholder="e.g., 8"
+                                    required>
                             </div>
                         </div>
                         <div class="form-group">
@@ -147,6 +155,15 @@
                     <div class="results-meta">
                         <span class="strategy-badge" id="strategy-used">Strategy: Smart Balance</span>
                         <span class="task-count-badge" id="results-count">0 tasks analyzed</span>
+                        <!-- View Toggle -->
+                        <div class="view-toggle">
+                            <button class="toggle-btn active" data-view="list">
+                                <span>📋</span> List View
+                            </button>
+                            <button class="toggle-btn" data-view="matrix">
+                                <span>📊</span> Matrix View
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -156,10 +173,56 @@
                     <div id="suggestions-list" class="suggestions-list"></div>
                 </div>
 
-                <!-- All Tasks -->
-                <div class="all-tasks-container">
-                    <h3>📊 All Tasks (Sorted by Priority)</h3>
-                    <div id="results-list" class="results-list"></div>
+                <!-- List View (Default) -->
+                <div class="view-container" id="list-view">
+                    <div class="all-tasks-container">
+                        <h3>📊 All Tasks (Sorted by Priority)</h3>
+                        <div id="results-list" class="results-list"></div>
+                    </div>
+                </div>
+
+                <!-- Matrix View (Eisenhower Matrix) -->
+                <div class="view-container" id="matrix-view" style="display: none;">
+                    <h3>📊 Eisenhower Matrix</h3>
+                    <p class="matrix-description">Tasks organized by Urgency (≤3 days) vs Importance (≥7/10)</p>
+
+                    <div class="matrix-grid">
+                        <!-- Quadrant 1: Urgent & Important (Do First) -->
+                        <div class="matrix-quadrant q1">
+                            <div class="quadrant-header">
+                                <h4>🔴 Do First</h4>
+                                <p>Urgent & Important</p>
+                            </div>
+                            <div class="quadrant-tasks" id="q1-tasks"></div>
+                        </div>
+
+                        <!-- Quadrant 2: Not Urgent & Important (Schedule) -->
+                        <div class="matrix-quadrant q2">
+                            <div class="quadrant-header">
+                                <h4>🟡 Schedule</h4>
+                                <p>Not Urgent & Important</p>
+                            </div>
+                            <div class="quadrant-tasks" id="q2-tasks"></div>
+                        </div>
+
+                        <!-- Quadrant 3: Urgent & Not Important (Delegate) -->
+                        <div class="matrix-quadrant q3">
+                            <div class="quadrant-header">
+                                <h4>🟠 Delegate</h4>
+                                <p>Urgent & Not Important</p>
+                            </div>
+                            <div class="quadrant-tasks" id="q3-tasks"></div>
+                        </div>
+
+                        <!-- Quadrant 4: Not Urgent & Not Important (Eliminate) -->
+                        <div class="matrix-quadrant q4">
+                            <div class="quadrant-header">
+                                <h4>🟢 Eliminate</h4>
+                                <p>Not Urgent & Not Important</p>
+                            </div>
+                            <div class="quadrant-tasks" id="q4-tasks"></div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -174,7 +237,8 @@
                 <div class="error-content">
                     <span class="error-icon">⚠️</span>
                     <p id="error-text"></p>
-                    <button class="btn btn-secondary" onclick="document.getElementById('error-message').style.display='none'">Close</button>
+                    <button class="btn btn-secondary"
+                        onclick="document.getElementById('error-message').style.display='none'">Close</button>
                 </div>
             </div>
         </div>
@@ -189,4 +253,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

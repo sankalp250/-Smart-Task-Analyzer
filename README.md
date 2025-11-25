@@ -345,25 +345,6 @@ FastAPI provides automatic interactive documentation:
 
 3. **Fixed Weights vs. ML:** Used fixed strategy weights rather than machine learning. Trade-off: Less adaptive but more predictable and explainable.
 
-## ⏱️ Time Breakdown
-
-| Task | Estimated | Actual |
-|------|-----------|--------|
-| **Backend Development** | 2h | 2.5h |
-| - Database models & schemas | 20min | 25min |
-| - Scoring algorithm | 60min | 75min |
-| - API endpoints | 30min | 35min |
-| - Unit tests | 10min | 15min |
-| **Frontend Development** | 1.5h | 2h |
-| - HTML structure | 20min | 25min |
-| - CSS styling | 40min | 50min |
-| - JavaScript logic | 30min | 45min |
-| **Documentation** | 30min | 45min |
-| - README | 20min | 30min |
-| - Code comments | 10min | 15min |
-| **Testing & Debugging** | 30min | 45min |
-| **Total** | **4.5h** | **5.75h** |
-
 ## 🧪 Testing
 
 ### Unit Tests
