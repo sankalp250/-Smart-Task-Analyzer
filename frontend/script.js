@@ -375,6 +375,9 @@ function displayResults(analyzeData, suggestData) {
     elements.resultsList.innerHTML = analyzeData.tasks
         .map((task, index) => createResultCard(task, index + 1, false))
         .join('');
+
+    // Store analyzed tasks for matrix view
+    window.analyzedTasks = analyzeData.tasks;
 }
 
 /**
@@ -642,18 +645,202 @@ function createMatrixTaskCard(task, quadrantClass) {
                 <span>📅 ${formatDate(task.due_date)}</span>
                 <span>⏱️ ${task.estimated_hours}h</span>
                 <span>⭐ ${task.importance}/10</span>
-            </div>
-        </div>
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const taskDate = new Date(date);
+    taskDate.setHours(0, 0, 0, 0);
+
+    const diffTime = taskDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+        return `${ Math.abs(diffDays) } days ago(OVERDUE)`;
+    } else if (diffDays === 0) {
+        return 'Today';
+    } else if (diffDays === 1) {
+        return 'Tomorrow';
+    } else if (diffDays <= 7) {
+        return `In ${ diffDays } days`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+    elements.errorText.textContent = message;
+    elements.errorMessage.style.display = 'flex';
+}
+
+/**
+ * Show notification (simple implementation)
+ */
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${ type === 'success' ? '#4facfe' : '#667eea' };
+    color: white;
+    padding: 1rem 1.5rem;
+    border - radius: 8px;
+    box - shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    z - index: 2000;
+    animation: slideIn 0.3s ease;
     `;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
-// Update displayResults to store analyzed tasks for matrix view
-const originalDisplayResults = displayResults;
-function displayResults(analyzeData, suggestData) {
-    // Call original function
-    originalDisplayResults(analyzeData, suggestData);
+// Make removeTask available globally
+window.removeTask = removeTask;
 
-    // Store analyzed tasks for matrix view
-    window.analyzedTasks = analyzeData.tasks;
+// ===== EISENHOWER MATRIX VIEW =====
+
+// Initialize Matrix view event listeners after DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const viewToggleBtns = document.querySelectorAll('[data-view]');
+    viewToggleBtns.forEach(btn => {
+        btn.addEventListener('click', () => toggleView(btn));
+    });
+});
+
+/**
+ * Toggle between List and Matrix views
+ */
+function toggleView(selectedBtn) {
+    const viewToggleBtns = document.querySelectorAll('[data-view]');
+    const listView = document.getElementById('list-view');
+    const matrixView = document.getElementById('matrix-view');
+
+    // Update button states
+    viewToggleBtns.forEach(btn => btn.classList.remove('active'));
+    selectedBtn.classList.add('active');
+
+    const view = selectedBtn.dataset.view;
+
+    if (view === 'list') {
+        listView.style.display = 'block';
+        matrixView.style.display = 'none';
+    } else if (view === 'matrix') {
+        listView.style.display = 'none';
+        matrixView.style.display = 'block';
+
+        // Render matrix view if we have analyzed tasks
+        if (window.analyzedTasks) {
+            renderMatrixView(window.analyzedTasks);
+        }
+    }
 }
 
+/**
+ * Render Eisenhower Matrix view
+ * Categorizes tasks into 4 quadrants:
+ * Q1: Urgent & Important (Do First)
+ * Q2: Not Urgent & Important (Schedule)
+ * Q3: Urgent & Not Important (Delegate)
+ * Q4: Not Urgent & Not Important (Eliminate)
+ */
+function renderMatrixView(tasks) {
+    const q1Tasks = document.getElementById('q1-tasks');
+    const q2Tasks = document.getElementById('q2-tasks');
+    const q3Tasks = document.getElementById('q3-tasks');
+    const q4Tasks = document.getElementById('q4-tasks');
+
+    // Categorize tasks
+    const quadrants = {
+        q1: [], // Urgent & Important
+        q2: [], // Not Urgent & Important
+        q3: [], // Urgent & Not Important
+        q4: []  // Not Urgent & Not Important
+    };
+
+    tasks.forEach(task => {
+        const isUrgent = isTaskUrgent(task.due_date);
+        const isImportant = task.importance >= 7;
+
+        if (isUrgent && isImportant) {
+            quadrants.q1.push(task);
+        } else if (!isUrgent && isImportant) {
+            quadrants.q2.push(task);
+        } else if (isUrgent && !isImportant) {
+            quadrants.q3.push(task);
+        } else {
+            quadrants.q4.push(task);
+        }
+    });
+
+    // Render each quadrant
+    renderQuadrant(q1Tasks, quadrants.q1, 'q1');
+    renderQuadrant(q2Tasks, quadrants.q2, 'q2');
+    renderQuadrant(q3Tasks, quadrants.q3, 'q3');
+    renderQuadrant(q4Tasks, quadrants.q4, 'q4');
+}
+
+/**
+ * Check if a task is urgent (due within 3 days or overdue)
+ */
+function isTaskUrgent(dueDateStr) {
+    const dueDate = new Date(dueDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const taskDate = new Date(dueDate);
+    taskDate.setHours(0, 0, 0, 0);
+
+    const diffTime = taskDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays <= 3; // Urgent if due within 3 days or overdue
+}
+
+/**
+ * Render tasks in a specific quadrant
+ */
+function renderQuadrant(container, tasks, quadrantClass) {
+    if (tasks.length === 0) {
+        container.innerHTML = '<div class="quadrant-empty">No tasks in this quadrant</div>';
+        return;
+    }
+
+    container.innerHTML = tasks.map(task => createMatrixTaskCard(task, quadrantClass)).join('');
+}
+
+/**
+ * Create a compact task card for matrix view
+ */
+function createMatrixTaskCard(task, quadrantClass) {
+    return `
+        < div class="matrix-task-card ${quadrantClass}" >
+            <div class="matrix-task-title">${escapeHtml(task.title)}</div>
+            <div class="matrix-task-meta">
+                <span class="matrix-task-score">Score: ${task.priority_score.toFixed(1)}</span>
+                <span>📅 ${formatDate(task.due_date)}</span>
+                <span>⏱️ ${task.estimated_hours}h</span>
+                <span>⭐ ${task.importance}/10</span>
+            </div>
+        </div >
+        `;
+}
