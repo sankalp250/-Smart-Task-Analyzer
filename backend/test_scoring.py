@@ -142,15 +142,8 @@ class TestTaskScorer:
     
     def test_invalid_date_handling(self):
         """Test handling of invalid date formats."""
-        invalid_task = TaskBase(
-            title="Invalid date task",
-            due_date="invalid-date",
-            estimated_hours=2.0,
-            importance=5,
-            dependencies=[]
-        )
-        
-        # Should not crash, should return neutral score
+        # Test the urgency calculator directly with invalid date
+        # (bypassing Pydantic validation which would reject it)
         score = self.scorer.calculate_urgency_score("invalid-date")
         assert score == 50, "Invalid dates should return neutral score"
     
