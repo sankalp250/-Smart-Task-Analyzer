@@ -14,12 +14,12 @@ let currentStrategy = 'smart_balance';
 const elements = {
     // Strategy cards
     strategyCards: document.querySelectorAll('.strategy-card'),
-    
+
     // Input mode toggle
     toggleBtns: document.querySelectorAll('.toggle-btn'),
     formMode: document.getElementById('form-mode'),
     jsonMode: document.getElementById('json-mode'),
-    
+
     // Form elements
     taskForm: document.getElementById('task-form'),
     taskTitle: document.getElementById('task-title'),
@@ -27,20 +27,20 @@ const elements = {
     taskHours: document.getElementById('task-hours'),
     taskImportance: document.getElementById('task-importance'),
     taskDependencies: document.getElementById('task-dependencies'),
-    
+
     // Task list
     taskListContainer: document.getElementById('task-list-container'),
     taskList: document.getElementById('task-list'),
     taskCount: document.getElementById('task-count'),
     clearTasksBtn: document.getElementById('clear-tasks'),
-    
+
     // JSON input
     jsonInput: document.getElementById('json-input'),
     loadJsonBtn: document.getElementById('load-json'),
-    
+
     // Analyze button
     analyzeBtn: document.getElementById('analyze-btn'),
-    
+
     // Results
     resultsSection: document.getElementById('results-section'),
     strategyUsed: document.getElementById('strategy-used'),
@@ -48,7 +48,7 @@ const elements = {
     suggestionsList: document.getElementById('suggestions-list'),
     resultsList: document.getElementById('results-list'),
     suggestionsContainer: document.getElementById('suggestions-container'),
-    
+
     // Loading and error
     loadingOverlay: document.getElementById('loading-overlay'),
     errorMessage: document.getElementById('error-message'),
@@ -69,21 +69,21 @@ function initializeEventListeners() {
     elements.strategyCards.forEach(card => {
         card.addEventListener('click', () => selectStrategy(card));
     });
-    
+
     // Input mode toggle
     elements.toggleBtns.forEach(btn => {
         btn.addEventListener('click', () => toggleInputMode(btn));
     });
-    
+
     // Form submission
     elements.taskForm.addEventListener('submit', handleFormSubmit);
-    
+
     // Clear tasks
     elements.clearTasksBtn.addEventListener('click', clearAllTasks);
-    
+
     // Load JSON
     elements.loadJsonBtn.addEventListener('click', loadTasksFromJSON);
-    
+
     // Analyze tasks
     elements.analyzeBtn.addEventListener('click', analyzeTasks);
 }
@@ -111,7 +111,7 @@ function selectStrategy(selectedCard) {
 function toggleInputMode(selectedBtn) {
     elements.toggleBtns.forEach(btn => btn.classList.remove('active'));
     selectedBtn.classList.add('active');
-    
+
     const mode = selectedBtn.dataset.mode;
     if (mode === 'form') {
         elements.formMode.style.display = 'block';
@@ -127,13 +127,13 @@ function toggleInputMode(selectedBtn) {
  */
 function handleFormSubmit(e) {
     e.preventDefault();
-    
+
     // Parse dependencies
     const depsInput = elements.taskDependencies.value.trim();
-    const dependencies = depsInput 
+    const dependencies = depsInput
         ? depsInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d))
         : [];
-    
+
     // Create task object
     const task = {
         title: elements.taskTitle.value.trim(),
@@ -142,20 +142,20 @@ function handleFormSubmit(e) {
         importance: parseInt(elements.taskImportance.value),
         dependencies: dependencies
     };
-    
+
     // Validate task
     if (!validateTask(task)) {
         return;
     }
-    
+
     // Add task to list
     tasks.push(task);
     updateTaskList();
-    
+
     // Reset form
     elements.taskForm.reset();
     setDefaultDueDate();
-    
+
     // Show success feedback
     showNotification('Task added successfully!', 'success');
 }
@@ -168,22 +168,22 @@ function validateTask(task) {
         showError('Task title is required');
         return false;
     }
-    
+
     if (!task.due_date) {
         showError('Due date is required');
         return false;
     }
-    
+
     if (task.estimated_hours <= 0) {
         showError('Estimated hours must be greater than 0');
         return false;
     }
-    
+
     if (task.importance < 1 || task.importance > 10) {
         showError('Importance must be between 1 and 10');
         return false;
     }
-    
+
     return true;
 }
 
@@ -196,11 +196,11 @@ function updateTaskList() {
         elements.analyzeBtn.disabled = true;
         return;
     }
-    
+
     elements.taskListContainer.style.display = 'block';
     elements.analyzeBtn.disabled = false;
     elements.taskCount.textContent = tasks.length;
-    
+
     elements.taskList.innerHTML = tasks.map((task, index) => `
         <div class="task-item">
             <div class="task-item-info">
@@ -231,7 +231,7 @@ function removeTask(index) {
  */
 function clearAllTasks() {
     if (tasks.length === 0) return;
-    
+
     if (confirm('Are you sure you want to clear all tasks?')) {
         tasks = [];
         updateTaskList();
@@ -245,36 +245,36 @@ function clearAllTasks() {
  */
 function loadTasksFromJSON() {
     const jsonText = elements.jsonInput.value.trim();
-    
+
     if (!jsonText) {
         showError('Please enter JSON data');
         return;
     }
-    
+
     try {
         const parsedTasks = JSON.parse(jsonText);
-        
+
         if (!Array.isArray(parsedTasks)) {
             showError('JSON must be an array of tasks');
             return;
         }
-        
+
         // Validate all tasks
         for (const task of parsedTasks) {
             if (!validateTask(task)) {
                 return;
             }
         }
-        
+
         // Add tasks
         tasks = parsedTasks;
         updateTaskList();
-        
+
         // Switch to form mode to show tasks
         document.querySelector('[data-mode="form"]').click();
-        
+
         showNotification(`${tasks.length} tasks loaded from JSON`, 'success');
-        
+
     } catch (error) {
         showError('Invalid JSON format: ' + error.message);
     }
@@ -288,10 +288,10 @@ async function analyzeTasks() {
         showError('Please add some tasks first');
         return;
     }
-    
+
     // Show loading
     elements.loadingOverlay.style.display = 'flex';
-    
+
     try {
         // Call analyze endpoint
         const analyzeResponse = await fetch(`${API_BASE_URL}/api/tasks/analyze/`, {
@@ -304,14 +304,14 @@ async function analyzeTasks() {
                 strategy: currentStrategy
             })
         });
-        
+
         if (!analyzeResponse.ok) {
             const errorData = await analyzeResponse.json();
             throw new Error(errorData.detail || 'Failed to analyze tasks');
         }
-        
+
         const analyzeData = await analyzeResponse.json();
-        
+
         // Call suggest endpoint
         const suggestResponse = await fetch(`${API_BASE_URL}/api/tasks/suggest/`, {
             method: 'POST',
@@ -320,23 +320,23 @@ async function analyzeTasks() {
             },
             body: JSON.stringify(tasks)
         });
-        
+
         if (!suggestResponse.ok) {
             const errorData = await suggestResponse.json();
             throw new Error(errorData.detail || 'Failed to get suggestions');
         }
-        
+
         const suggestData = await suggestResponse.json();
-        
+
         // Display results
         displayResults(analyzeData, suggestData);
-        
+
         // Hide loading
         elements.loadingOverlay.style.display = 'none';
-        
+
         // Scroll to results
         elements.resultsSection.scrollIntoView({ behavior: 'smooth' });
-        
+
     } catch (error) {
         elements.loadingOverlay.style.display = 'none';
         showError('Error analyzing tasks: ' + error.message);
@@ -349,7 +349,7 @@ async function analyzeTasks() {
 function displayResults(analyzeData, suggestData) {
     // Show results section
     elements.resultsSection.style.display = 'block';
-    
+
     // Update meta information
     const strategyNames = {
         'smart_balance': 'Smart Balance',
@@ -357,10 +357,10 @@ function displayResults(analyzeData, suggestData) {
         'high_impact': 'High Impact',
         'deadline_driven': 'Deadline Driven'
     };
-    
+
     elements.strategyUsed.textContent = `Strategy: ${strategyNames[analyzeData.strategy_used]}`;
     elements.resultsCount.textContent = `${analyzeData.tasks.length} tasks analyzed`;
-    
+
     // Display suggestions
     if (suggestData.suggested_tasks.length > 0) {
         elements.suggestionsContainer.style.display = 'block';
@@ -370,7 +370,7 @@ function displayResults(analyzeData, suggestData) {
     } else {
         elements.suggestionsContainer.style.display = 'none';
     }
-    
+
     // Display all tasks
     elements.resultsList.innerHTML = analyzeData.tasks
         .map((task, index) => createResultCard(task, index + 1, false))
@@ -383,7 +383,7 @@ function displayResults(analyzeData, suggestData) {
 function createResultCard(task, rank, isSuggestion) {
     const priorityClass = getPriorityClass(task.priority_score);
     const rankBadge = isSuggestion ? `<span style="font-size: 1.5rem; margin-right: 0.5rem;">${getRankEmoji(rank)}</span>` : '';
-    
+
     return `
         <div class="result-card ${priorityClass}">
             <div class="result-header">
@@ -450,13 +450,13 @@ function formatDate(dateString) {
     const date = new Date(dateString);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const taskDate = new Date(date);
     taskDate.setHours(0, 0, 0, 0);
-    
+
     const diffTime = taskDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) {
         return `${Math.abs(diffDays)} days ago (OVERDUE)`;
     } else if (diffDays === 0) {
@@ -506,9 +506,9 @@ function showNotification(message, type) {
         animation: slideIn 0.3s ease;
     `;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         notification.style.animation = 'fadeOut 0.3s ease';
@@ -518,3 +518,142 @@ function showNotification(message, type) {
 
 // Make removeTask available globally
 window.removeTask = removeTask;
+
+// ===== EISENHOWER MATRIX VIEW =====
+
+// Initialize Matrix view event listeners after DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const viewToggleBtns = document.querySelectorAll('[data-view]');
+    viewToggleBtns.forEach(btn => {
+        btn.addEventListener('click', () => toggleView(btn));
+    });
+});
+
+/**
+ * Toggle between List and Matrix views
+ */
+function toggleView(selectedBtn) {
+    const viewToggleBtns = document.querySelectorAll('[data-view]');
+    const listView = document.getElementById('list-view');
+    const matrixView = document.getElementById('matrix-view');
+
+    // Update button states
+    viewToggleBtns.forEach(btn => btn.classList.remove('active'));
+    selectedBtn.classList.add('active');
+
+    const view = selectedBtn.dataset.view;
+
+    if (view === 'list') {
+        listView.style.display = 'block';
+        matrixView.style.display = 'none';
+    } else if (view === 'matrix') {
+        listView.style.display = 'none';
+        matrixView.style.display = 'block';
+
+        // Render matrix view if we have analyzed tasks
+        if (window.analyzedTasks) {
+            renderMatrixView(window.analyzedTasks);
+        }
+    }
+}
+
+/**
+ * Render Eisenhower Matrix view
+ * Categorizes tasks into 4 quadrants:
+ * Q1: Urgent & Important (Do First)
+ * Q2: Not Urgent & Important (Schedule)
+ * Q3: Urgent & Not Important (Delegate)
+ * Q4: Not Urgent & Not Important (Eliminate)
+ */
+function renderMatrixView(tasks) {
+    const q1Tasks = document.getElementById('q1-tasks');
+    const q2Tasks = document.getElementById('q2-tasks');
+    const q3Tasks = document.getElementById('q3-tasks');
+    const q4Tasks = document.getElementById('q4-tasks');
+
+    // Categorize tasks
+    const quadrants = {
+        q1: [], // Urgent & Important
+        q2: [], // Not Urgent & Important
+        q3: [], // Urgent & Not Important
+        q4: []  // Not Urgent & Not Important
+    };
+
+    tasks.forEach(task => {
+        const isUrgent = isTaskUrgent(task.due_date);
+        const isImportant = task.importance >= 7;
+
+        if (isUrgent && isImportant) {
+            quadrants.q1.push(task);
+        } else if (!isUrgent && isImportant) {
+            quadrants.q2.push(task);
+        } else if (isUrgent && !isImportant) {
+            quadrants.q3.push(task);
+        } else {
+            quadrants.q4.push(task);
+        }
+    });
+
+    // Render each quadrant
+    renderQuadrant(q1Tasks, quadrants.q1, 'q1');
+    renderQuadrant(q2Tasks, quadrants.q2, 'q2');
+    renderQuadrant(q3Tasks, quadrants.q3, 'q3');
+    renderQuadrant(q4Tasks, quadrants.q4, 'q4');
+}
+
+/**
+ * Check if a task is urgent (due within 3 days or overdue)
+ */
+function isTaskUrgent(dueDateStr) {
+    const dueDate = new Date(dueDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const taskDate = new Date(dueDate);
+    taskDate.setHours(0, 0, 0, 0);
+
+    const diffTime = taskDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays <= 3; // Urgent if due within 3 days or overdue
+}
+
+/**
+ * Render tasks in a specific quadrant
+ */
+function renderQuadrant(container, tasks, quadrantClass) {
+    if (tasks.length === 0) {
+        container.innerHTML = '<div class="quadrant-empty">No tasks in this quadrant</div>';
+        return;
+    }
+
+    container.innerHTML = tasks.map(task => createMatrixTaskCard(task, quadrantClass)).join('');
+}
+
+/**
+ * Create a compact task card for matrix view
+ */
+function createMatrixTaskCard(task, quadrantClass) {
+    return `
+        <div class="matrix-task-card ${quadrantClass}">
+            <div class="matrix-task-title">${escapeHtml(task.title)}</div>
+            <div class="matrix-task-meta">
+                <span class="matrix-task-score">Score: ${task.priority_score.toFixed(1)}</span>
+                <span>📅 ${formatDate(task.due_date)}</span>
+                <span>⏱️ ${task.estimated_hours}h</span>
+                <span>⭐ ${task.importance}/10</span>
+            </div>
+        </div>
+    `;
+}
+
+// Update displayResults to store analyzed tasks for matrix view
+const originalDisplayResults = displayResults;
+function displayResults(analyzeData, suggestData) {
+    // Call original function
+    originalDisplayResults(analyzeData, suggestData);
+
+    // Store analyzed tasks for matrix view
+    window.analyzedTasks = analyzeData.tasks;
+}
+
