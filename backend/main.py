@@ -16,6 +16,7 @@ from schemas import (
     TaskResponse
 )
 from scoring import TaskScorer
+from feedback import feedback_store
 from database import engine, Base
 
 # Create database tables
@@ -46,6 +47,8 @@ async def root():
         "endpoints": {
             "analyze": "/api/tasks/analyze/",
             "suggest": "/api/tasks/suggest/",
+            "feedback": "/api/feedback/",
+            "weights": "/api/weights/personalized",
             "docs": "/docs"
         }
     }
@@ -139,6 +142,60 @@ async def suggest_tasks(tasks: List[TaskBase]):
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "Smart Task Analyzer"}
+
+
+@app.post("/api/feedback/")
+async def submit_feedback(task_title: str, was_helpful: bool, strategy_used: str):
+    """
+    Submit user feedback on a suggested task.
+    
+    Args:
+        task_title: Title of the task that was suggested
+        was_helpful: Whether the suggestion was helpful (true/false)
+        strategy_used: The strategy that was used for the suggestion
+    
+    Returns:
+        Feedback summary and updated recommendations
+    """
+    try:
+        # Record feedback
+        feedback_store.add_feedback(task_title, was_helpful, strategy_used)
+        
+        # Get updated summary
+        summary = feedback_store.get_feedback_summary()
+        
+        return {
+            "message": "Feedback recorded successfully",
+            "summary": summary
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error recording feedback: {str(e)}")
+
+
+@app.get("/api/weights/personalized")
+async def get_personalized_weights(strategy: str = "smart_balance"):
+    """
+    Get personalized weights for a strategy based on user feedback.
+    
+    Args:
+        strategy: The base strategy to get personalized weights for
+    
+    Returns:
+        Personalized weights and feedback summary
+    """
+    try:
+        weights = feedback_store.get_personalized_weights(strategy)
+        summary = feedback_store.get_feedback_summary()
+        
+        return {
+            "strategy": strategy,
+            "personalized_weights": weights,
+            "feedback_summary": summary
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting weights: {str(e)}")
 
 
 if __name__ == "__main__":
