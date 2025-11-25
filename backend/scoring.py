@@ -18,8 +18,50 @@ class TaskScorer:
     Calculates priority scores for tasks using configurable strategies.
     """
     
-    def __init__(self, strategy: str = "smart_balance"):
+    # US Federal Holidays for 2025 (can be extended)
+    HOLIDAYS_2025 = [
+        "2025-01-01",  # New Year's Day
+        "2025-01-20",  # Martin Luther King Jr. Day
+        "2025-02-17",  # Presidents' Day
+        "2025-05-26",  # Memorial Day
+        "2025-07-04",  # Independence Day
+        "2025-09-01",  # Labor Day
+        "2025-10-13",  # Columbus Day
+        "2025-11-11",  # Veterans Day
+        "2025-11-27",  # Thanksgiving
+        "2025-12-25",  # Christmas
+    ]
+    
+    def __init__(self, strategy: str = "smart_balance", use_business_days: bool = True):
         self.strategy = strategy
+        self.use_business_days = use_business_days
+    
+    def is_weekend(self, date: datetime) -> bool:
+        """Check if a date falls on a weekend (Saturday=5, Sunday=6)."""
+        return date.weekday() >= 5
+    
+    def is_holiday(self, date: datetime) -> bool:
+        """Check if a date is a US federal holiday."""
+        date_str = date.date().isoformat()
+        return date_str in self.HOLIDAYS_2025
+    
+    def calculate_business_days(self, start_date: datetime, end_date: datetime) -> int:
+        """
+        Calculate number of business days between two dates.
+        Excludes weekends and optionally holidays.
+        """
+        if start_date > end_date:
+            return -self.calculate_business_days(end_date, start_date)
+        
+        business_days = 0
+        current_date = start_date
+        
+        while current_date < end_date:
+            if not self.is_weekend(current_date) and not self.is_holiday(current_date):
+                business_days += 1
+            current_date += timedelta(days=1)
+        
+        return business_days
         
     def detect_circular_dependencies(self, tasks: List[TaskBase]) -> List[int]:
         """
@@ -61,7 +103,14 @@ class TaskScorer:
     def calculate_urgency_score(self, due_date_str: str) -> float:
         """
         Calculate urgency score based on due date.
-        Returns score between 0-100.
+        Returns score between 0-200.
+        
+        With business days enabled:
+        - Considers only weekdays (Mon-Fri)
+        - Excludes federal holidays
+        - Weekend due dates get urgency boost
+        
+        Scoring:
         - Past due: 100+ (with penalty multiplier)
         - Due today: 95
         - Due in 1-3 days: 80-90
@@ -72,26 +121,38 @@ class TaskScorer:
         try:
             due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
             now = datetime.now()
-            days_until_due = (due_date - now).days
             
+            # Calculate days until due
+            if self.use_business_days:
+                days_until_due = self.calculate_business_days(now, due_date)
+                
+                # Weekend boost: if due on weekend, increase urgency
+                weekend_boost = 0
+                if self.is_weekend(due_date):
+                    weekend_boost = 10  # Extra urgency for weekend deadlines
+            else:
+                days_until_due = (due_date - now).days
+                weekend_boost = 0
+            
+            # Base urgency calculation
             if days_until_due < 0:
                 # Past due - exponential penalty
                 overdue_days = abs(days_until_due)
                 return min(100 + (overdue_days * 10), 200)
             elif days_until_due == 0:
-                return 95
+                return 95 + weekend_boost
             elif days_until_due <= 1:
-                return 90
+                return 90 + weekend_boost
             elif days_until_due <= 3:
-                return 80
+                return 80 + weekend_boost
             elif days_until_due <= 7:
-                return 70 - (days_until_due - 3) * 2.5
+                return (70 - (days_until_due - 3) * 2.5) + weekend_boost
             elif days_until_due <= 14:
-                return 55 - (days_until_due - 7) * 2
+                return (55 - (days_until_due - 7) * 2) + weekend_boost
             elif days_until_due <= 30:
-                return 35 - (days_until_due - 14) * 1.5
+                return (35 - (days_until_due - 14) * 1.5) + weekend_boost
             else:
-                return max(10, 35 - (days_until_due - 30) * 0.5)
+                return max(10, (35 - (days_until_due - 30) * 0.5) + weekend_boost)
         except (ValueError, AttributeError):
             # Invalid date format - return neutral score
             return 50
@@ -199,16 +260,26 @@ class TaskScorer:
         # Urgency reasoning
         try:
             due_date = datetime.fromisoformat(task.due_date.replace('Z', '+00:00'))
-            days_until = (due_date - datetime.now()).days
+            now = datetime.now()
+            
+            if self.use_business_days:
+                days_until = self.calculate_business_days(now, due_date)
+                day_type = "business days"
+            else:
+                days_until = (due_date - now).days
+                day_type = "days"
+            
+            # Weekend indicator
+            weekend_indicator = " 📅" if self.is_weekend(due_date) else ""
             
             if days_until < 0:
-                reasons.append(f"🔴 OVERDUE by {abs(days_until)} days")
+                reasons.append(f"🔴 OVERDUE by {abs(days_until)} {day_type}{weekend_indicator}")
             elif days_until == 0:
-                reasons.append("🔴 Due TODAY")
+                reasons.append(f"🔴 Due TODAY{weekend_indicator}")
             elif days_until <= 3:
-                reasons.append(f"🟡 Due in {days_until} days")
+                reasons.append(f"🟡 Due in {days_until} {day_type}{weekend_indicator}")
             elif days_until <= 7:
-                reasons.append(f"🟢 Due this week")
+                reasons.append(f"🟢 Due this week{weekend_indicator}")
         except:
             reasons.append("⚠️ Invalid due date")
         

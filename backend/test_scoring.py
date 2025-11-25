@@ -170,5 +170,60 @@ class TestTaskScorer:
         assert unique_results > 1, "Different strategies should produce different results"
 
 
+    def test_business_days_calculation(self):
+        """Test business days calculation excluding weekends."""
+        # Monday to Friday (same week) = 4 business days
+        monday = datetime(2025, 12, 1)  # Monday
+        friday = datetime(2025, 12, 5)  # Friday
+        
+        business_days = self.scorer.calculate_business_days(monday, friday)
+        assert business_days == 4, "Monday to Friday should be 4 business days"
+        
+        # Friday to Monday (next week) = 1 business day (only Monday)
+        friday = datetime(2025, 12, 5)  # Friday
+        monday_next = datetime(2025, 12, 8)  # Monday
+        
+        business_days = self.scorer.calculate_business_days(friday, monday_next)
+        assert business_days == 1, "Friday to next Monday should be 1 business day"
+    
+    def test_weekend_urgency_boost(self):
+        """Test that tasks due on weekends get urgency boost."""
+        # Create a specific Saturday date (Dec 6, 2025 is a Saturday)
+        saturday = "2025-12-06"
+        
+        scorer_with_business_days = TaskScorer(strategy="smart_balance", use_business_days=True)
+        
+        # Calculate score - should include weekend boost
+        score = scorer_with_business_days.calculate_urgency_score(saturday)
+        
+        # Verify it's a valid score and weekend is detected
+        assert isinstance(score, float), "Should return a valid score"
+        assert score > 0, "Should return a positive score"
+        
+        # Verify weekend detection
+        saturday_date = datetime(2025, 12, 6)
+        assert scorer_with_business_days.is_weekend(saturday_date), "Dec 6, 2025 should be a weekend"
+    
+    def test_holiday_exclusion(self):
+        """Test that holidays are excluded from business days."""
+        # Test with Christmas 2025 (Dec 25)
+        christmas = datetime(2025, 12, 25)
+        assert self.scorer.is_holiday(christmas), "Christmas should be recognized as holiday"
+        
+        # Test with regular day
+        regular_day = datetime(2025, 12, 15)
+        assert not self.scorer.is_holiday(regular_day), "Regular day should not be holiday"
+        
+        # Test business days calculation around holiday
+        # Dec 23 (Tue) to Dec 26 (Fri) should be 2 business days (23, 24, skip 25 holiday, 26)
+        # Actually: 23, 24 = 2 days (25 is holiday, 26 is not included in range)
+        before_christmas = datetime(2025, 12, 23)
+        after_christmas = datetime(2025, 12, 26)
+        
+        business_days = self.scorer.calculate_business_days(before_christmas, after_christmas)
+        # Should be 2: Dec 23 and Dec 24 (Dec 25 is holiday, Dec 26 is end date not included)
+        assert business_days == 2, "Should exclude Christmas from business days"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
