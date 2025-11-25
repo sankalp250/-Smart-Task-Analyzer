@@ -650,13 +650,3 @@ function createMatrixTaskCard(task, quadrantClass) {
     `;
 }
 
-// Update displayResults to store analyzed tasks for matrix view
-const originalDisplayResults = displayResults;
-function displayResults(analyzeData, suggestData) {
-    // Call original function
-    originalDisplayResults(analyzeData, suggestData);
-
-    // Store analyzed tasks for matrix view
-    window.analyzedTasks = analyzeData.tasks;
-}
-
